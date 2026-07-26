@@ -24,4 +24,4 @@ npx skills@latest add enbop/fungi-skills --skill fungi --agent codex --global
 
 ## Included skills
 
-- `fungi`: Install and initialize Fungi, connect trusted devices, manage local and remote services, apply recipes, create `.fungi.md` service files, and diagnose results with inspect and bounded logs.
+- `fungi`: Install and initialize Fungi, connect devices with explicit trust approval, manage local and remote services, apply recipes, create `.fungi.md` service files, and diagnose results with inspect and bounded logs.

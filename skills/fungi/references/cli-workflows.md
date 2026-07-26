@@ -38,7 +38,7 @@ fungi info id
 fungi device mdns
 ```
 
-Save and inspect a peer:
+Save and inspect a device:
 
 ```bash
 fungi device add NAME DEVICE_ID
@@ -47,15 +47,24 @@ fungi device list
 fungi device get NAME
 ```
 
-On the device receiving incoming management, save and trust the controller:
+Saving a device does not authorize it. Treat trust as high risk and do not place it in an unattended onboarding batch. On the device that would grant access:
 
 ```bash
 fungi device add CONTROLLER_NAME CONTROLLER_DEVICE_ID
+fungi device get CONTROLLER_NAME
+fungi security show
+```
+
+Present the full Device ID, authorization direction, service-management capability, allowed host paths, persistence, and `fungi device untrust CONTROLLER_NAME` rollback command. Pause until the user explicitly approves this exact authorization. A general request to add or connect devices is not approval.
+
+Only after approval, run:
+
+```bash
 fungi device trust CONTROLLER_NAME
 fungi device trusted
 ```
 
-Repeat in the opposite direction only when mutual access is wanted. Diagnose with:
+Do not automate Fungi's confirmation input. Repeat the approval process independently in the opposite direction only when mutual access is wanted. Diagnose with:
 
 ```bash
 fungi ping NAME
