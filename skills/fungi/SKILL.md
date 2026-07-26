@@ -9,19 +9,27 @@ Operate Fungi as a private, multi-device service platform. Keep every action exp
 
 ## Start with the current CLI
 
-1. Run `fungi --version` and the relevant `fungi <command> --help` before mutating state. Fungi is evolving; prefer installed CLI help over remembered syntax.
-2. Use the same global `--fungi-dir`/`-f` value for every command in a workflow when the user selects a non-default directory.
-3. Treat the local daemon as the control plane. Most `info`, `device`, `service`, `connection`, and `ping` commands require it.
-4. Distinguish the local device from the target device before changing a service. Address a remote service as `NAME@DEVICE` or use `fungi service --device DEVICE ...`.
+1. Require a standalone `fungi` CLI on `PATH` on the device where the agent operates, even when the desktop Fungi App is installed. Use the CLI as the agent's interface; do not invoke a binary inside an app bundle.
+2. Run `fungi --version` and the relevant `fungi <command> --help` before mutating state. Fungi is evolving; prefer installed CLI help over remembered syntax.
+3. Use the default Fungi directory unless the user explicitly wants an isolated configuration. Use the same global `--fungi-dir`/`-f` value for every command when a non-default directory is selected.
+4. Treat the local daemon as the control plane. Most `info`, `device`, `service`, `connection`, and `ping` commands require it.
+5. Distinguish the local device from the target device before changing a service. Address a remote service as `NAME@DEVICE` or use `fungi service --device DEVICE ...`.
 
 Read [references/cli-workflows.md](references/cli-workflows.md) when installing Fungi, adding devices, operating services, or diagnosing failures. Read [references/service-files.md](references/service-files.md) before creating or modifying a `.fungi.md` file.
 
 ## Establish the baseline
 
 1. Check whether `fungi` is on `PATH`. If it is absent, follow the platform-aware installation flow in the CLI reference and verify the binary before continuing.
-2. Initialize with `fungi init` unless an existing configuration is already in use.
-3. Start the daemon in the foreground or through the installed user service. Do not launch a second daemon if one is already responding.
-4. Verify the baseline with:
+2. Identify the local CLI without requiring a daemon:
+
+```bash
+fungi info build --json
+```
+
+3. Before initialization or startup, probe for an existing daemon with `fungi info version`, `fungi info rpc-address`, and `fungi info config-path`. Reuse a compatible daemon regardless of whether the CLI, a user service, or the desktop Fungi App started it. Do not launch a second daemon.
+4. If the CLI and daemon versions differ, collect their versions, RPC address, and config path before deciding there is a conflict. A version difference alone does not prove incompatibility. Never stop, restart, kill, or close the daemon or Fungi App without the user's explicit permission.
+5. Only when no daemon responds, initialize with `fungi init` unless an existing configuration is already in use, then start the daemon in the foreground or through the installed user service.
+6. Verify the baseline with:
 
 ```bash
 fungi info version
@@ -31,9 +39,11 @@ fungi info runtime
 
 Report missing runtimes before applying a service that depends on them.
 
+On desktop, the Fungi App is another client of the default daemon: it may connect to a daemon started through the CLI, and the CLI may use a compatible daemon started by the App. Keep automation CLI-first and avoid a custom `--fungi-dir` unless isolation is intentional.
+
 ## Add devices and authorize trust
 
-1. Obtain each device ID with `fungi info id` on that device. Have the user verify device IDs through a trusted channel.
+1. Obtain each device ID with `fungi info id` on that device. For an App-only target, ask the user to copy its Device ID from Fungi App. Have the user verify device IDs through a trusted channel.
 2. Discover with `fungi device mdns` when devices share a LAN, or use a verified device ID and optional direct multiaddress.
 3. Save the device with `fungi device add NAME DEVICE_ID [--addr MULTIADDR]`.
 4. Treat `device trust` as a separate, high-risk authorization. Never infer permission to trust from a request to install Fungi, add a device, connect devices, complete onboarding, or deploy a service.
@@ -89,12 +99,17 @@ Use evidence in this order:
 
 For remote logs, the default is 200 lines and the maximum is 2000. Always use a bounded `--tail` during diagnosis, including for local services. After every corrective change, rerun the smallest check that can prove it worked.
 
+## Escalate feedback conditionally
+
+First try to diagnose and resolve problems in scope. If the user asks to report feedback, or a reproducible problem remains, offer once to draft an issue: route CLI, daemon, and service behavior to `enbop/fungi`; App behavior to `enbop/fungi-app`; and these instructions to `enbop/fungi-skills`. Show a redacted draft and obtain explicit approval before creating a public issue. Remove Device IDs, hostnames, IP addresses, host paths, tokens, and sensitive logs. Do not solicit feedback after a successful workflow or repeat the offer after the user declines.
+
 ## Guard destructive and security-sensitive actions
 
 - Classify `device trust` as high risk and require explicit, device-specific user approval immediately before execution.
 - Explain that an authorized device can manage services and access configured host paths.
 - Inspect a recipe or custom file before applying it.
 - Require a clear target before `stop`, `remove`, `untrust`, or address removal. State whether the target is local or remote.
+- Before stopping, restarting, killing, or closing any daemon or Fungi App process, probe its version, RPC address, config path, and likely owner, then obtain explicit user permission.
 - Do not use remote `remove --local-only` as if it removed the actual service; it only forgets the local cached record.
 - Do not edit Fungi's internal state directly when a CLI operation exists.
 - Do not claim success from a zero exit status alone. Confirm the resulting device, connection, or service state.
