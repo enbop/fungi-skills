@@ -140,4 +140,4 @@ Ordinary RPC requests time out after 30 seconds; apply and pull operations time 
 - `fungi info build --json` describes the local binary without requiring the daemon.
 - `fungi info config-path` and `fungi info rpc-address` identify the active daemon configuration and endpoint.
 - `fungi security show` displays runtime boundaries. `security allow-path` expands host access and needs explicit user intent.
-- Re-run the official installer to update. If the update requires a daemon restart, identify its owner and obtain explicit user permission before stopping or restarting it.
+- Re-run the official installer to update, then compare the CLI and daemon versions. If the existing daemon is still on the prior version, identify its owner and end the update session by asking directly whether the user wants it restarted. Explain that daemon-managed services will be interrupted, and do not stop or restart anything until the user explicitly approves.

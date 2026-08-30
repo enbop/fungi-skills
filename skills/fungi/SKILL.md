@@ -120,3 +120,5 @@ First try to diagnose and resolve problems in scope. If the user asks to report 
 ## Finish with an operational summary
 
 Report the Fungi version and config directory used, devices added or trusted and trust direction, services and target devices changed, verification performed, local connection addresses created, and any remaining security or runtime caveats.
+
+After updating the CLI, compare `fungi info build --json` with `fungi info version`. If the existing daemon is still on the prior version, report its likely owner and the expected service interruption, then end with a direct question asking whether the user wants that daemon restarted now. An update request alone does not authorize the restart.
