@@ -88,7 +88,7 @@ fungi connection streams --verbose
 fungi connection relay-status --verbose
 ```
 
-On Fungi 0.7.1 and later, ping defaults to four rounds; pass `--count` explicitly in agent workflows. `--watch` is continuous and should be used only for an explicit monitoring request in a controllable terminal. On older versions whose `ping --help` lacks `--count`, bare ping is continuous, so interrupt it after a bounded observation period or omit it in favor of the connection commands. Do not infer connectivity merely because a finite ping completed: inspect its connection and RTT rows.
+`--watch` continues until interrupted; use it only for an explicit monitoring request in a controllable terminal. Do not infer connectivity merely because a ping completed: inspect its connection and RTT rows.
 
 ## Recipes and service lifecycle
 
@@ -132,7 +132,7 @@ fungi service disconnect NAME@DEVICE
 
 Remote service management succeeds only when the target device trusts the controller. If a device is offline, `fungi service remove NAME@DEVICE --local-only` forgets cached state and does not remove the service from that device.
 
-Fungi 0.7.1 and later bound ordinary RPC requests to 30 seconds and apply or pull operations to 300 seconds. A timeout from a state-changing command leaves the outcome uncertain: inspect the target with `service inspect`, `service list --refresh`, or bounded logs before retrying. Do not assume a timeout means the daemon rolled the operation back.
+Ordinary RPC requests time out after 30 seconds; apply and pull operations time out after 300 seconds. A timeout from a state-changing command leaves the outcome uncertain: inspect the target with `service inspect`, `service list --refresh`, or bounded logs before retrying. Do not assume a timeout means the daemon rolled the operation back.
 
 ## Useful context
 
