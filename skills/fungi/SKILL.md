@@ -51,7 +51,7 @@ On desktop, the Fungi App is another client of the default daemon: it may connec
 6. Present an authorization summary containing the device granting access, the device being authorized, the full Device ID, the trust direction, service-management access, every currently allowed host path, persistence until `device untrust`, and the exact rollback command.
 7. Pause and explicitly ask the user to approve that specific authorization. Do not execute `fungi device trust DEVICE` until the user responds affirmatively. Approval for one device or direction does not authorize another; trust is not automatically mutual.
 8. After approval, run the command and preserve Fungi's native security confirmation for the user. Never pipe or script a response to that prompt.
-9. Verify with `fungi device trusted`, `fungi ping DEVICE --count 4`, and, when needed, `fungi connection overview`. A completed ping is not proof of connectivity; require an active connection and successful RTT output.
+9. On the device granting access, verify the controller appears in `fungi device trusted`. From that controller, run `fungi ping TARGET --count 4` toward the device granting access and, when needed, `fungi connection overview`. Trust grants incoming access: trusting a controller does not authorize the granting device to ping or manage that controller. Follow the [trust direction matrix](references/cli-workflows.md#trust-direction-and-verification) for remote service checks. A completed ping is not proof of connectivity; require an active connection and successful RTT output.
 
 Use `--watch` only when the user explicitly requests continuous monitoring and the process can be interrupted safely.
 
@@ -69,8 +69,8 @@ fungi service apply NAME@DEVICE --recipe RECIPE --dry-run
 
 Omit `@DEVICE` for a local service.
 
-4. Apply, optionally adding `--start` when the user wants it running immediately. Avoid `--yes` unless non-interactive execution was explicitly requested and the preview was reviewed.
-5. Close the feedback loop with `service inspect`, `service logs --tail`, and `service connect` when the service publishes an endpoint.
+4. Inspect an existing service before applying and choose the intended final state using the [service lifecycle table](references/cli-workflows.md#choose-the-final-service-state). Plain apply preserves its desired running or stopped state; updating a running managed workload restarts it and can interrupt service. In the current CLI, `--start` ensures the final state is running, including on repeated applies. Avoid `--yes` unless non-interactive execution was explicitly requested and the preview was reviewed.
+5. Close the feedback loop with `service inspect` and bounded `service logs --tail` when available. When the service should be running, use `service connect` and verify its published endpoint from the authorized controller; otherwise verify it remains stopped.
 
 ## Create a custom service
 
@@ -87,14 +87,14 @@ fungi service apply NAME@DEVICE ./NAME.fungi.md --dry-run
 
 Omit `@DEVICE` for a local service.
 
-7. Apply, inspect, start if necessary, inspect again, and read bounded logs. Revise the file and repeat until the observed state matches the request.
+7. Choose the intended final state using the [service lifecycle table](references/cli-workflows.md#choose-the-final-service-state), then apply, inspect, and read bounded logs. Start a stopped service only when the user wants it running. If an apply fails or reports mixed results, reconcile its observed state before deciding whether to revise or retry; verify published endpoints from the authorized controller when the service should be running.
 
 ## Diagnose systematically
 
-Use evidence in this order:
+For remote diagnosis, run ping and service commands from the controller authorized by the target. Check `device trusted` on the target to verify that incoming authorization; the controller's own trust list describes the reverse direction. Use evidence in this order:
 
 1. `fungi info version` and `fungi info runtime`
-2. `fungi device get DEVICE` and `fungi device trusted`
+2. `fungi device get DEVICE` on the controller and `fungi device trusted` on the target granting access
 3. `fungi ping DEVICE --count 4` and `fungi connection overview --verbose`
 4. `fungi service inspect NAME@DEVICE --verbose` (omit `@DEVICE` for local)
 5. `fungi service logs NAME@DEVICE --tail 200` (omit `@DEVICE` for local)
@@ -114,7 +114,7 @@ First try to diagnose and resolve problems in scope. If the user asks to report 
 - Before stopping, restarting, killing, or closing any daemon or Fungi App process, probe its version, RPC address, config path, and likely owner, then obtain explicit user permission.
 - Do not use remote `remove --local-only` as if it removed the actual service; it only forgets the local cached record.
 - Do not edit Fungi's internal state directly when a CLI operation exists.
-- If a state-changing RPC command times out, treat the outcome as unknown. Inspect the device or service state before retrying so a late success is not duplicated or reversed.
+- If a state-changing command times out, fails after applying a manifest, or reports mixed success and failure, reconcile the outcome before retrying: inspect the target state, read bounded logs when available, and verify the published endpoint when it should be running. A saved manifest does not prove a successful restart, and an error does not prove rollback.
 - Do not claim success from a zero exit status alone. Confirm the resulting device, connection, or service state.
 
 ## Finish with an operational summary

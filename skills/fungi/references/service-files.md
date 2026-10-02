@@ -88,11 +88,15 @@ publish:
 ```bash
 fungi info runtime
 fungi service apply NAME@DEVICE ./NAME.fungi.md --dry-run
-fungi service apply NAME@DEVICE ./NAME.fungi.md --start
+```
+
+Inspect an existing service, then choose the apply/start sequence from the [service lifecycle table](cli-workflows.md#choose-the-final-service-state). After applying, verify:
+
+```bash
 fungi service inspect NAME@DEVICE --verbose
 fungi service logs NAME@DEVICE --tail 200
 ```
 
 Omit `@DEVICE` for a local service.
 
-If validation fails, change only the reported field or runtime assumption, then rerun `--dry-run`. If startup fails, preserve the file, inspect state and bounded logs, revise, and apply again.
+If validation fails, change only the reported field or runtime assumption, then rerun `--dry-run`. If apply or startup fails, preserve the file and reconcile the manifest, observed state, and bounded logs before choosing a correction or retry. When the service should be running, also verify its published endpoint from the authorized controller as described in the [result verification workflow](cli-workflows.md#verify-the-result-before-retrying).
