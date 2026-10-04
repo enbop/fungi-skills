@@ -79,7 +79,22 @@ fungi device trust CONTROLLER_NAME
 fungi device trusted
 ```
 
-Do not automate Fungi's confirmation input. Repeat the approval process independently in the opposite direction only when mutual access is wanted. Diagnose with:
+Do not automate Fungi's confirmation input. Repeat the approval process independently in the opposite direction only when mutual access is wanted.
+
+### Trust direction and verification
+
+`fungi device trust REMOTE` authorizes REMOTE to initiate access to the device running that command. It does not grant that device permission to manage or ping REMOTE. Saving a device and establishing a transport connection do not grant this permission either.
+
+In the examples below, `server` and `controller` are saved device names on the respective peers. Trust commands require the explicit authorization and native confirmation described above; the reverse row is optional.
+
+| Intended access | Device granting access and trust command | Verify trust on | Run ping from | Run service access from |
+| --- | --- | --- | --- | --- |
+| Controller manages services on server | On server: `fungi device trust controller` | Server: `fungi device trusted` must list controller | Controller: `fungi ping server --count 4` | Controller: `fungi service inspect NAME@server --verbose`, then `fungi service connect NAME@server` when running |
+| Server also manages services on controller | After separate approval, on controller: `fungi device trust server` | Controller: `fungi device trusted` must list server | Server: `fungi ping controller --count 4` | Server: `fungi service inspect NAME@controller --verbose`, then `fungi service connect NAME@controller` when running |
+
+The first row alone is sufficient for controller-to-server operation. A failed reverse-direction ping can coexist with a healthy direct transport connection; check the authorization direction before diagnosing a network failure. Do not add reverse trust merely to make that ping succeed.
+
+On the authorized controller, diagnose toward the target (`NAME` below is that target's saved device name):
 
 ```bash
 fungi ping NAME --count 4
@@ -101,12 +116,33 @@ fungi service apply NAME@DEVICE --recipe RECIPE --dry-run
 fungi service apply NAME@DEVICE --recipe RECIPE --start
 ```
 
-For a custom file, replace `--recipe RECIPE` with its path. Use `NAME` for a local service or `NAME@DEVICE` for a remote service:
+The `--start` examples above request a running final state. For a custom file, replace `--recipe RECIPE` with its path. Use `NAME` for a local service or `NAME@DEVICE` for a remote service:
 
 ```bash
 fungi service apply NAME ./service.fungi.md --dry-run
 fungi service apply NAME@DEVICE ./service.fungi.md --start
 ```
+
+### Choose the final service state
+
+Inspect an existing target with `fungi service inspect NAME@DEVICE --verbose` before updating it. For the table below, `TARGET` is `NAME` locally or `NAME@DEVICE` remotely; `FILE` is the service file, or replace it with `--recipe RECIPE`.
+
+| Situation and intended result | Command | Expected behavior on success |
+| --- | --- | --- |
+| First deployment, run immediately | `fungi service apply TARGET FILE --start` | Applies the definition and ensures the service is running |
+| Update an already-running service | `fungi service apply TARGET FILE` | Preserves desired running state and restarts a managed workload |
+| Update a stopped service, keep it stopped | `fungi service apply TARGET FILE` | Preserves desired stopped state |
+| Update a stopped service, then start after inspection | `fungi service apply TARGET FILE`, inspect, then `fungi service start TARGET` | Separates applying the definition from the requested startup |
+
+In the current CLI, `--start` means "ensure running after apply" and is valid on repeated applies, including running-service updates. A stopped service may also be updated and started in one command with `apply TARGET FILE --start` when that is the requested outcome. Check the installed CLI's `service apply --help` for older-version differences.
+
+Apply preserves the stored desired state, which can differ from the observed state after a failure. An unchanged manifest does not make reapplying a running managed workload interruption-free: apply can still restart it. Services that forward an existing TCP endpoint do not manage or restart the external host process.
+
+### Verify the result before retrying
+
+Read the current CLI's `Manifest`, `Workload`, and `Final phase` output together with any errors. A manifest can be saved even when restart or final inspection fails. After mixed output, a failure, or a timeout, inspect the target and read bounded logs when available before retrying; do not infer rollback from an error or success from an "applied" message alone.
+
+When the service should be running, use `service connect` from the authorized controller and check the actual published endpoint with its appropriate client (for example, an HTTP request for a web endpoint). A running phase or a local listener alone does not prove the application responds. If it should remain stopped, verify that state without starting it merely to test access. If state cannot be determined, report the uncertainty instead of blindly repeating apply or start.
 
 Observe and control local or remote instances uniformly:
 
